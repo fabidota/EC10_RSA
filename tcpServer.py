@@ -4,65 +4,57 @@ from Crypto.Util import number
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 serverPort = 1300
 serverSocket = socket(AF_INET,SOCK_STREAM)
-geraLogsDebugs = False
+geraLogsDebugs = True
+encode = "utf-8"
+bitLength = 8
 
 def abreSocket():
     serverSocket.bind(("",serverPort))
     serverSocket.listen(5) # o argumento “listen” diz à biblioteca de soquetes que queremos enfileirar no máximo 5 requisições de conexão (normalmente o máximo) antes de recusar começar a recusar conexões externas. Caso o resto do código esteja escrito corretamente, isso deverá ser o suficiente.
 
-def enviaDado(dado):
-    connectionSocket.send(bytes(str(dado), "utf-8"))
+def enviaDado(dado, encode):
+    connectionSocket.send(bytes(str(dado),encode))
+
+def recebeDado(encode):
+    msgRaw = connectionSocket.recv(65000)
+    return str(msgRaw,encode)
 
 def fechaSocket():
     connectionSocket.close()
 
-# def ordem_no_alfabeto(letra):
-#     if letra.isupper():
-#         return ord(letra) - ord('A') + 1
-#     elif letra.islower():
-#         return ord(letra) - ord('a') + 1
-#     else:
-#         return 0  # Se não for uma letra do alfabeto
-    
-# def letra_no_alfabeto(posicao):
-#     if 1 <= posicao <= 26:  # O alfabeto tem 26 letras
-#         return chr(ord('A') + posicao - 1)
-#     else:
-#         return ' '  # Se a posição estiver fora do intervalo válido
+def encrypt(message, e, n, encode):
+    vetorEncrypt = []
+    for a in message:
+        vetorEncrypt.append(int.from_bytes(a.encode(encode)))
 
-# def trocaLetra(letra):
-#     posicaoLetraAlfabeto = ordem_no_alfabeto(letra)
-#     chave = pow(posicaoLetraAlfabeto, int(d), int(n))
-#     print("antes:", posicaoLetraAlfabeto)
-#     print("depois:", chave)
-#     return letra_no_alfabeto(chave)
+    #print("Vetor de chars encrypt: " + str(vetorEncrypt))
+    vetorNumChar = []
+    for caract in message:
+        vetorNumChar.append(str(pow(ord(caract),int(e),int(n))))
 
-# def decript(texto):
-#     textoAlterado = ""
-#     for caract in texto:
-#         textoAlterado += trocaLetra(caract)
-#     return textoAlterado
+    retorno = ""
+    for a in vetorNumChar:
+        retorno += chr(int(a))
+            
+    return retorno
 
-def decrypt(encrypted, d, n):
-    #decrypted_int = pow(int(encrypted), int(d), int(n))
-    #decrypted_message = decrypted_int.to_bytes((decrypted_int.bit_length() + 7) // 8, byteorder='big').decode()
-    # Suponha que 'msgcifrada' seja a mensagem cifrada como um número inteiro
-    msgcifrada_int = int(encrypted)
+def decrypt(message, d, n):
 
-    # Decifra a mensagem usando o método modPow da biblioteca Crypto.Util.number
-    msgdecifrada_int = pow(msgcifrada_int, d, n)
+    vetorDecrypt = []
 
-    # Converte a mensagem decifrada de volta para uma sequência de bytes
-    msgdecifrada_bytes = long_to_bytes(msgdecifrada_int)
+    for a in message:
+        vetorDecrypt.append(str(pow(ord(a),int(d),int(n))))
 
-    # Converte a sequência de bytes para uma string
-    decrypted_message = msgdecifrada_bytes.decode()
-    
-    return decrypted_message
+    saida = ""
+    for a in vetorDecrypt:
+        saida += chr(int(a))
+
+    return saida
 
 def realizaLog(msg):
     if (geraLogsDebugs):
         print(msg)
+
 
 clientSocket = socket(AF_INET, SOCK_STREAM)
 
@@ -74,11 +66,9 @@ connectionSocket, addr = serverSocket.accept()
 ###################################
 
 # Escolha aleatória de dois números primos grandes p e q
-# p = number.getPrime(bitlen // 2, randfunc=number.getRandomRange)
-# q = number.getPrime(bitlen // 2, randfunc=number.getRandomRange)
+p = number.getPrime(bitLength // 2)
+q = number.getPrime(bitLength // 2)
 
-p = 3
-q = 5
 
 n = p * q
 
@@ -90,43 +80,46 @@ e = m - 1
 while number.GCD(m, e) > 1:
     e += 2
 
-# d seja inverso multiplicativo de "e"
-#d = number.inverse(e, m)
-# d = n
-# while True:
-#     if (e * d) % m == 1:
-#         break
-#     print(str(d))
-#     d -= 1
-
 d = pow(e, -1, m)
-d = 15
 
-print("p:", p)
-print("q:", q)
-print("n:", n)
-print("m:", m)
-print("e:", e)
-print("d:", d)
+realizaLog("p: "+str(p))
+realizaLog("q: "+str(q))
+realizaLog("n: "+str(n))
+realizaLog("m: "+str(m))
+realizaLog("e: "+str(e))
+realizaLog("d: "+str(d))
 
 chave =  "(" + str(e) + "," + str(n) + ")"
-print(chave)
+print("Chave enviada: e e n: "+chave)
 
-###################################
+############# ENVIA CHAVE ###############
 
-enviaDado(chave)
+enviaDado(chave, encode)
 time.sleep(1)
-msgCript = connectionSocket.recv(65000)
-#msgCriptUnicode = str(msgCript,"utf-8")
-msg = decrypt(msgCript, d, n)
-msgDecriptUnicode = str(msg,"utf-8")
-devolveMaiusculo = msg.upper()
-#msgCriptoMaiusculo = criptDecript(devolveMaiusculo,K,False)
-enviaDado(devolveMaiusculo)
-realizaLog("Mensagem criptografada recebida: " + msgCriptUnicode)
 
-print ("Mensagem decriptografada : ", msg)
-print ("Mensagem devolvida para o client : ", devolveMaiusculo)
+############# RECEBE MENSAGEM ###############
+msgCript = recebeDado(encode)
+time.sleep(1)
 
+############# DECRIPTOGRAFA ###############
+msgRecv = decrypt(msgCript, d, n)
+print("#################")
+print("mensagem decrypt: ", msgRecv)
+print("#################")
 
+############# RECEBE CHAVE ###############
+chavePublicaCliente = recebeDado(encode)
+realizaLog ("Recebi a chave: " + chavePublicaCliente)
+chavePublicaCliente = chavePublicaCliente.replace('(','').replace(')','')
+chaves = chavePublicaCliente.split(',')
+e_client = chaves[0]
+n_cliente = chaves[1]
+
+############# CRIPTOGRAFA DEVOLUTIVA ###############
+devolveMaiusculo = msgRecv.upper()
+msgCriptoMaiusculo = encrypt(devolveMaiusculo,int(e_client),int(n),encode)
+
+############# ENVIA MENSAGEM ###############
+enviaDado(msgCriptoMaiusculo,encode)
+time.sleep(1)
 fechaSocket()
