@@ -118,6 +118,7 @@ n_cliente = chaves[1]
 ############# CRIPTOGRAFA DEVOLUTIVA ###############
 devolveMaiusculo = msgRecv.upper()
 msgCriptoMaiusculo = encrypt(devolveMaiusculo,int(e_client),int(n),encode)
+realizaLog ("msg cripto: "+msgCriptoMaiusculo)
 
 ############# ENVIA MENSAGEM ###############
 enviaDado(msgCriptoMaiusculo,encode)

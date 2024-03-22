@@ -3,8 +3,8 @@ import time
 from Crypto.Util import number
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 import numpy as np
-serverName = "192.168.231.1"
-serverPort = 1300
+serverName = "10.1.70.22"
+serverPort = 1305
 geraLogsDebug = True
 encode = "utf-8"
 bitLength = 8
